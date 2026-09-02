@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vitrine</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="bgLayer"></div>
+  <div id="bgOverlay"></div>
+
+  <div class="app">
+
+    <!-- HEADER -->
+    <header class="header">
+      <nav class="pages glass" id="pageTabs"></nav>
+
+      <form class="searchbar glass" id="searchForm" action="https://www.google.com/search" method="GET">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.7;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" name="q" id="searchInput" placeholder="Search the web..." autocomplete="off" />
+        
+        <!-- Custom Animated Suggestions Box -->
+        <div class="search-suggestions glass" id="searchSuggestionsBox"></div>
+
+        <svg width="18" height="18" viewBox="0 0 24 24" class="g-icon"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <button type="button" id="searchCloseBtn" class="search-close" aria-label="Hide search" title="Hide search">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </form>
+
+      <div class="status">
+        <!-- Waffle Menu Button -->
+        <div class="pill glass waffle-btn" id="waffleBtn" data-widget="apps" title="Google Apps">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="5" r="2.5"/><circle cx="12" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/>
+            <circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/>
+            <circle cx="5" cy="19" r="2.5"/><circle cx="12" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/>
+          </svg>
+        </div>
+
+        <div class="pill glass" id="weatherWidget" data-widget="weather">
+          <span class="pill-label">Weather</span>
+          <span id="weatherTemp">-</span>
+        </div>
+        <div class="pill glass clock-block" id="clockWidget" data-widget="clock">
+          <span id="clockDate">—</span>
+          <span id="clockTime">--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- BOARD CANVAS -->
+    <main class="canvas" id="boardCanvas">
+      <div class="board-grid" id="boardGrid"></div>
+      <div class="floating-widgets" id="floatingWidgets"></div>
+    </main>
+
+  </div>
+
+  <!-- Apps Popover (Waffle Menu) -->
+  <div class="popover-scrim" id="appsScrim"></div>
+  <div class="apps-popover glass" id="appsPopover">
+    <a href="https://mail.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=mail.google.com&sz=64" alt="Gmail"><span>Gmail</span></a>
+    <a href="https://drive.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=drive.google.com&sz=64" alt="Drive"><span>Drive</span></a>
+    <a href="https://calendar.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=calendar.google.com&sz=64" alt="Calendar"><span>Calendar</span></a>
+    <a href="https://youtube.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" alt="YouTube"><span>YouTube</span></a>
+    <a href="https://meet.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=meet.google.com&sz=64" alt="Meet"><span>Meet</span></a>
+    <a href="https://photos.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=photos.google.com&sz=64" alt="Photos"><span>Photos</span></a>
+    <a href="https://maps.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=maps.google.com&sz=64" alt="Maps"><span>Maps</span></a>
+    <a href="https://translate.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=translate.google.com&sz=64" alt="Translate"><span>Translate</span></a>
+    <a href="https://keep.google.com" class="app-item"><img src="https://www.google.com/s2/favicons?domain=keep.google.com&sz=64" alt="Keep"><span>Keep</span></a>
+  </div>
+
+  <!-- Floating right-side toolbar -->
+  <div class="toolbar-stack" id="toolbarStack">
+    <div class="toolbar-extra" id="toolbarExtra">
+      <button class="fab glass" data-tool="search" title="Search" aria-label="Search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
+      <button class="fab glass" data-tool="wallpaper" title="Wallpaper" aria-label="Wallpaper">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+      </button>
+      <button class="fab glass" data-tool="widgets" title="Widgets" aria-label="Widgets">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+      </button>
+      <button class="fab glass" data-tool="import" title="Import Chrome bookmarks" aria-label="Import bookmarks">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      </button>
+      <button class="fab glass" data-tool="manage" title="Manage boards" aria-label="Manage boards">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg>
+      </button>
+      <button class="fab glass" id="toolbarCollapseBtn" title="Close" aria-label="Close toolbar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <button class="fab glass" id="toolbarToggleBtn" aria-label="Open toolbar" title="Menu">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+    </button>
+    <button class="fab glass" id="openSettingsBtn" aria-label="Open settings" title="Settings">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Widgets panel -->
+  <div class="popover-scrim" id="widgetsScrim"></div>
+  <div class="widgets-panel glass" id="widgetsPanel">
+    <div class="wp-title">ADD</div>
+    <div class="wp-row" data-add-widget="board">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+      <span>Board</span><button class="wp-add-btn">Add</button>
+    </div>
+    <div class="wp-row" data-add-widget="notes">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      <span>Notes</span><button class="wp-add-btn">Add</button>
+    </div>
+    <div class="wp-row" data-add-widget="calendar">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>Calendar</span><button class="wp-add-btn">Add</button>
+    </div>
+    <div class="wp-row" data-add-widget="pomodoro">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span>Pomodoro</span><button class="wp-add-btn">Add</button>
+    </div>
+
+    <div class="wp-row wp-toggle-row" data-toggle-widget="apps">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      <span>Google Apps</span><div class="switch" data-key="apps"></div>
+    </div>
+    <div class="wp-row wp-toggle-row" data-toggle-widget="clock">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span>Clock</span><div class="switch" data-key="clock"></div>
+    </div>
+    <div class="wp-row wp-toggle-row" data-toggle-widget="search">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span>Search</span><div class="switch" data-key="search"></div>
+    </div>
+    <div class="wp-row wp-toggle-row" data-toggle-widget="weather">
+      <svg class="wp-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+      <span>Weather</span><div class="switch" data-key="weather"></div>
+    </div>
+    <div class="wp-weather-city">
+      <input type="text" id="weatherCityInput" class="text-input" placeholder="City name..." />
+      <button class="btn-primary" id="weatherApplyBtn">Apply</button>
+    </div>
+  </div>
+
+  <!-- Add-link popover (anchored) -->
+  <div class="popover-scrim" id="addLinkScrim"></div>
+  <div class="add-link-pop glass" id="addLinkPop">
+    <input type="hidden" id="addLinkBoardId" />
+    <input type="text" class="text-input" id="addLinkUrlInput" placeholder="Paste URL..." />
+    <div class="pop-actions">
+      <button class="btn-soft" id="addLinkCancelBtn">Cancel</button>
+      <button class="btn-primary" id="addLinkSaveBtn">Add Link</button>
+    </div>
+  </div>
+
+  <!-- Board "..." context menu -->
+  <div class="popover-scrim" id="boardMenuScrim"></div>
+  <div class="ctx-menu glass" id="boardMenu">
+    <button data-action="rename"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Rename</button>
+    <button data-action="openall"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open all links</button>
+    <button data-action="customize"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Customize <span class="ctx-chev">›</span></button>
+    <button data-action="delete" class="danger"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete board</button>
+  </div>
+
+  <!-- Board customize sub-popover -->
+  <div class="ctx-menu glass" id="boardCustomizePop">
+    <div class="bc-title">Accent color</div>
+    <div class="swatch-row" id="boardAccentRow"></div>
+    <button class="btn-soft" id="boardAccentClearBtn" style="width:100%;margin-top:8px;">Remove accent</button>
+  </div>
+
+  <!-- Page tab context menu -->
+  <div class="popover-scrim" id="pageMenuScrim"></div>
+  <div class="ctx-menu glass" id="pageMenu">
+    <button data-action="rename"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Rename</button>
+    <button data-action="delete" class="danger"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>
+  </div>
+
+  <!-- Color picker popover (reusable) -->
+  <div class="popover-scrim" id="colorPickerScrim"></div>
+  <div class="color-picker glass" id="colorPicker">
+    <canvas id="cpSquare" width="220" height="140"></canvas>
+    <div class="cp-row">
+      <div class="cp-swatch" id="cpSwatch"></div>
+      <input type="range" id="cpHue" min="0" max="359" value="0" class="cp-hue" />
+    </div>
+    <div class="cp-rgb">
+      <input type="number" id="cpR" min="0" max="255" />
+      <input type="number" id="cpG" min="0" max="255" />
+      <input type="number" id="cpB" min="0" max="255" />
+    </div>
+    <div class="cp-labels"><span>R</span><span>G</span><span>B</span></div>
+  </div>
+
+  <!-- Wallpaper picker drawer -->
+  <div class="popover-scrim" id="wallpaperScrim"></div>
+  <aside class="drawer glass" id="wallpaperDrawer">
+    <div class="drawer-head">
+      <div class="drawer-title">Wallpaper</div>
+      <button class="drawer-close" id="closeWallpaperBtn" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <div class="preset-grid" id="presetGrid"></div>
+      <div class="upload-row">
+        <input type="text" class="text-input" id="wallpaperUrlInput" placeholder="Paste an image URL…" />
+        <button class="upload-btn" id="saveUrlBtn">Use</button>
+      </div>
+      <div class="upload-row" style="margin-top:8px;">
+        <label class="upload-btn" style="flex:1; text-align:center; cursor:pointer;">
+          Upload from device
+          <input type="file" id="wallpaperUpload" accept="image/*" class="hidden" style="display:none;" />
+        </label>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Adjust wallpaper style modal -->
+  <div class="modal-scrim" id="wallpaperStyleModal">
+    <div class="modal glass wide">
+      <h3>Adjust Wallpaper Style</h3>
+      <div class="sub" id="wsThemeNote">Light theme detected.</div>
+
+      <div class="ws-row">
+        <div class="ws-col">
+          <label class="ws-label">Primary color <span id="wsPrimaryHex" class="ws-hex">#000000</span></label>
+          <button class="color-swatch-btn" id="wsPrimarySwatch" data-color-target="wsPrimary"></button>
+        </div>
+        <div class="ws-col">
+          <label class="ws-label">Board color <span id="wsBoardHex" class="ws-hex">#FFFFFF</span></label>
+          <button class="color-swatch-btn" id="wsBoardSwatch" data-color-target="wsBoard"></button>
+        </div>
+      </div>
+
+      <label class="ws-label">Board opacity <span id="wsOpacityVal" class="ws-hex">60%</span></label>
+      <input type="range" id="wsOpacity" min="0" max="100" value="60" />
+
+      <label class="ws-label">Board blur <span id="wsBlurVal" class="ws-hex">12px</span></label>
+      <input type="range" id="wsBlur" min="0" max="48" value="12" />
+
+      <div class="ws-row">
+        <div class="ws-col">
+          <div class="ws-label">Text size</div>
+          <div class="seg" id="wsTextSize">
+            <button data-val="S">S</button>
+            <button data-val="M" class="is-active">M</button>
+            <button data-val="L">L</button>
+          </div>
+        </div>
+        <div class="ws-col">
+          <div class="ws-label">Text weight</div>
+          <div class="seg" id="wsTextWeight">
+            <button data-val="Normal" class="is-active">Normal</button>
+            <button data-val="Bold">Bold</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-soft" id="wsCancelBtn">Cancel</button>
+        <button class="btn-soft" id="wsResetBtn">Reset</button>
+        <button class="btn-primary" id="wsSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal-scrim" id="settingsModal">
+    <div class="modal glass settings-modal">
+      <div class="settings-head">
+        <div class="drawer-title">Settings</div>
+        <button class="drawer-close" id="closeSettingsBtn" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="settings-body">
+        <nav class="settings-nav">
+          <button data-tab="account" class="is-active"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Account</button>
+          <button data-tab="general"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>General</button>
+          <button data-tab="appearance"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>Appearance</button>
+          <button data-tab="language"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>Language &amp; Region</button>
+          <button data-tab="support"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Support</button>
+          <div class="settings-nav-spacer"></div>
+          <button id="downloadDataBtn" class="download-data-btn"><svg class="ctx-icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Download data</button>
+        </nav>
+
+        <div class="settings-content">
+
+          <section class="settings-pane is-active" data-pane="account">
+            <div class="settings-section">
+              <h4>Account</h4>
+              <p class="pane-note">Vitrine stores everything locally in this browser — there's no account to sign in to. Your pages, boards, links, and settings live in this browser's storage and travel with your Chrome profile.</p>
+            </div>
+          </section>
+
+          <section class="settings-pane" data-pane="general">
+            <div class="settings-section">
+              <div class="field-row"><span>Show descriptions</span><div class="switch" id="stShowDescriptions"></div></div>
+            </div>
+            <div class="settings-section">
+              <h4>Layout</h4>
+              <div class="field-row">
+                <span>Number of columns</span>
+                <select id="stColumns" class="select-input">
+                  <option value="auto">Auto</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </div>
+              <div class="field-row" style="margin-top:16px;"><span>Board width</span><span class="val" id="stBoardWidthVal">260px</span></div>
+              <input type="range" id="stBoardWidth" min="200" max="420" value="260" />
+            </div>
+            <div class="settings-section">
+              <h4>Sidebar</h4>
+              <div class="field-row"><span>Always show all buttons</span><div class="switch" id="stSidebarAlways"></div></div>
+            </div>
+            <div class="settings-section">
+              <h4>Quick save</h4>
+              <div class="field-row">
+                <span>Save to board</span>
+                <select id="stQuickSaveBoard" class="select-input"></select>
+              </div>
+              <div class="field-row" style="margin-top:10px;">
+                <span>Shortcut</span>
+                <div style="display:flex; gap:8px;">
+                  <button class="btn-soft" id="stShortcutDisplay" disabled>Not set</button>
+                  <button class="btn-soft" id="stShortcutChangeBtn">Change</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-pane" data-pane="appearance">
+            <div class="settings-section">
+              <h4>Board</h4>
+              <div class="ws-row">
+                <div class="ws-col">
+                  <label class="ws-label">Primary color</label>
+                  <button class="color-swatch-btn" id="apBoardPrimary" data-color-target="apBoardPrimary"></button>
+                </div>
+                <div class="ws-col">
+                  <label class="ws-label">Board color</label>
+                  <button class="color-swatch-btn" id="apBoardColor" data-color-target="apBoardColor"></button>
+                </div>
+              </div>
+              <div class="field-row" style="margin-top:14px;"><span>Opacity</span><span class="val" id="apBoardOpacityVal">60%</span></div>
+              <input type="range" id="apBoardOpacity" min="0" max="100" value="60" />
+              <div class="field-row" style="margin-top:14px;"><span>Blur</span><span class="val" id="apBoardBlurVal">30px</span></div>
+              <input type="range" id="apBoardBlur" min="0" max="48" value="30" />
+              <div class="modal-actions" style="justify-content:flex-start; margin-top:10px;">
+                <button class="btn-soft" id="apBoardCancelBtn">Cancel</button>
+                <button class="btn-soft" id="apBoardResetBtn">Reset</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h4>Search bar</h4>
+              <label class="ws-label">Search bar color</label>
+              <button class="color-swatch-btn wide" id="apSearchColor" data-color-target="apSearchColor"></button>
+              <div class="field-row" style="margin-top:14px;"><span>Opacity</span><span class="val" id="apSearchOpacityVal">60%</span></div>
+              <input type="range" id="apSearchOpacity" min="0" max="100" value="60" />
+              <div class="field-row" style="margin-top:14px;"><span>Blur</span><span class="val" id="apSearchBlurVal">12px</span></div>
+              <input type="range" id="apSearchBlur" min="0" max="48" value="12" />
+              <div class="field-row" style="margin-top:14px;"><span>Width</span><span class="val" id="apSearchWidthVal">340px</span></div>
+              <input type="range" id="apSearchWidth" min="240" max="640" value="340" />
+              <div class="field-row" style="margin-top:12px;"><span>Match board style</span><div class="switch" id="apSearchMatch"></div></div>
+            </div>
+
+            <div class="settings-section">
+              <h4>Board text</h4>
+              <div class="field-row"><span>Size</span>
+                <div class="seg" id="apTextSize">
+                  <button data-val="S">S</button><button data-val="M" class="is-active">M</button><button data-val="L">L</button>
+                </div>
+              </div>
+              <div class="field-row" style="margin-top:10px;"><span>Weight</span>
+                <div class="seg" id="apTextWeight">
+                  <button data-val="Normal" class="is-active">Normal</button><button data-val="Bold">Bold</button>
+                </div>
+              </div>
+              <div class="field-row" style="margin-top:14px;"><span>Auto color (match background)</span><div class="switch" id="apTextAuto"></div></div>
+              <div id="apTextColorRow" style="margin-top:10px;">
+                <label class="ws-label">Custom text color</label>
+                <button class="color-swatch-btn wide" id="apTextColor" data-color-target="apTextColor"></button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h4>Outline</h4>
+              <label class="ws-label">Outline color</label>
+              <button class="color-swatch-btn wide" id="apOutlineColor" data-color-target="apOutlineColor"></button>
+              <div class="field-row" style="margin-top:14px;"><span>Opacity</span><span class="val" id="apOutlineOpacityVal">75%</span></div>
+              <input type="range" id="apOutlineOpacity" min="0" max="100" value="75" />
+              <div class="modal-actions" style="justify-content:space-between; margin-top:10px;">
+                <div class="field-row" style="flex:1;"><span>Match board style</span><div class="switch" id="apOutlineMatch"></div></div>
+                <button class="btn-soft" id="apOutlineRemoveAllBtn">Remove all</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-pane" data-pane="language">
+            <div class="settings-section">
+              <h4>Language &amp; Region</h4>
+              <div class="field-row"><span>Language</span><select class="select-input"><option>English (US)</option></select></div>
+              <div class="field-row" style="margin-top:10px;"><span>Time format</span><select class="select-input" id="stTimeFormat"><option value="12">12-hour</option><option value="24">24-hour</option></select></div>
+              <div class="field-row" style="margin-top:10px;"><span>Temperature unit</span><select class="select-input" id="stTempUnit"><option value="c">Celsius</option><option value="f">Fahrenheit</option></select></div>
+            </div>
+          </section>
+
+          <section class="settings-pane" data-pane="support">
+            <div class="settings-section">
+              <h4>Support</h4>
+              <p class="pane-note">Vitrine is a local, offline-first bookmark manager. If something looks off, try Reset in the Appearance tab, or use Download data to back up your boards before making changes.</p>
+              <div class="field-row"><span>Restart onboarding tour</span><button class="btn-soft" id="restartTourBtn">Start tour</button></div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding tour tooltip -->
+  <div class="tour-tooltip" id="tourTooltip">
+    <div class="tour-head">
+      <span class="tour-step" id="tourStepLabel">1 of 9</span>
+      <button class="tour-skip" id="tourSkipBtn">Skip tour</button>
+    </div>
+    <div class="tour-title" id="tourTitle"></div>
+    <div class="tour-desc" id="tourDesc"></div>
+    <div class="tour-import" id="tourImportExtra" style="display:none;">
+      <button class="btn-primary" id="tourImportBtn" style="width:100%;">Import bookmarks</button>
+      <button class="tour-later" id="tourLaterBtn">Maybe later</button>
+    </div>
+    <div class="tour-drag-illustration" id="tourDragIllustration" style="display:none;">
+      <div class="drag-mock"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span><span class="dot on"></span><span class="bar"></span></div>
+      <div class="drag-mock"><span class="dot"></span><span class="bar"></span><span class="dot"></span><span class="bar"></span></div>
+    </div>
+    <div class="tour-actions" id="tourActions">
+      <button class="btn-soft" id="tourBackBtn">← Back</button>
+      <button class="btn-primary" id="tourNextBtn">Next →</button>
+    </div>
+  </div>
+  <div class="tour-scrim" id="tourScrim"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

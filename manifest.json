@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Vitrine — Glass Bookmark Manager",
+  "version": "1.0",
+  "description": "A calm, glass-styled new tab: pages of boards for your bookmarks, live widgets, and a wallpaper you control.",
+  "author": "Sahil Raul (SR_Projects)",
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "action": {
+    "default_title": "Save this page to Vitrine"
+  },
+  "permissions": [
+    "bookmarks",
+    "geolocation",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://api.open-meteo.com/*",
+    "https://www.google.com/*",
+    "https://suggestqueries.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "quick-save": {
+      "description": "Save the current tab to Vitrine"
+    }
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+}
