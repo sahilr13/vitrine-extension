@@ -14,12 +14,18 @@
     "bookmarks",
     "geolocation",
     "storage",
-    "tabs"
+    "tabs",
+    "system.cpu",
+    "system.memory"
   ],
   "host_permissions": [
     "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
     "https://www.google.com/*",
-    "https://suggestqueries.google.com/*"
+    "https://suggestqueries.google.com/*",
+    "https://dev.to/*",
+    "https://hn.algolia.com/*",
+    "https://www.reddit.com/*"
   ],
   "background": {
     "service_worker": "background.js"

@@ -15,7 +15,7 @@ function defaultDB() {
     ],
     activePageId: null,
     widgetsVisible: { clock: true, search: true, weather: true, weatherCity: "", apps: true },
-    floatingWidgets: [], // {id, type, pageId, x, y, data}
+    floatingWidgets: [], // {id, type, pageId, x, y, style, variant, data}
     wallpaper: { value: WALLPAPER_PRESETS_VALUE(0), type: "photo" },
     settings: {
       general: {
@@ -26,7 +26,8 @@ function defaultDB() {
         quickSaveKey: "",
         quickSaveShortcut: "",
         timeFormat: "12",
-        tempUnit: "c"
+        tempUnit: "c",
+        fontFamily: "default"
       },
       appearance: {
         board: { primaryColor: "#3f7f93", boardColor: "#ffffff", opacity: 60, blur: 30 },
@@ -40,10 +41,38 @@ function defaultDB() {
 }
 function WALLPAPER_PRESETS_VALUE(i) { return WALLPAPER_PRESETS[i].value; }
 
+/* ============================================================
+   0b. Font options (system fonts only — no network fetch needed,
+   so this works offline and needs no extra host permissions)
+   ============================================================ */
+const FONT_OPTIONS = [
+  { key: "default", name: "System Default", stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif` },
+  { key: "inter", name: "Inter / Helvetica", stack: `Inter, "Helvetica Neue", Helvetica, Arial, sans-serif` },
+  { key: "segoe", name: "Segoe UI", stack: `"Segoe UI", Tahoma, Geneva, Verdana, sans-serif` },
+  { key: "roboto", name: "Roboto", stack: `Roboto, "Segoe UI", Arial, sans-serif` },
+  { key: "trebuchet", name: "Trebuchet MS", stack: `"Trebuchet MS", Helvetica, Arial, sans-serif` },
+  { key: "verdana", name: "Verdana", stack: `Verdana, Geneva, sans-serif` },
+  { key: "tahoma", name: "Tahoma", stack: `Tahoma, Geneva, sans-serif` },
+  { key: "georgia", name: "Georgia (Serif)", stack: `Georgia, "Times New Roman", serif` },
+  { key: "times", name: "Times New Roman (Serif)", stack: `"Times New Roman", Times, serif` },
+  { key: "palatino", name: "Palatino (Serif)", stack: `Palatino, "Palatino Linotype", "Book Antiqua", serif` },
+  { key: "garamond", name: "Garamond (Serif)", stack: `Garamond, Baskerville, "Baskerville Old Face", serif` },
+  { key: "courier", name: "Courier New (Mono)", stack: `"Courier New", Courier, monospace` },
+  { key: "consolas", name: "Consolas (Mono)", stack: `Consolas, Monaco, "Courier New", monospace` },
+  { key: "comic", name: "Comic Sans MS", stack: `"Comic Sans MS", "Comic Sans", cursive, sans-serif` }
+];
+function fontStackFor(key) {
+  const f = FONT_OPTIONS.find((f) => f.key === key);
+  return f ? f.stack : FONT_OPTIONS[0].stack;
+}
+function applyFont() {
+  const key = DB.settings.general.fontFamily || "default";
+  document.documentElement.style.setProperty("--app-font", fontStackFor(key));
+}
+
 async function loadDB() {
   const res = await chrome.storage.local.get([STORAGE_KEY, "markmez_db"]);
   
-  // Migrate old data if upgrading to Vitrine
   if (!res[STORAGE_KEY] && res["markmez_db"]) {
     DB = res["markmez_db"];
     chrome.storage.local.set({ [STORAGE_KEY]: DB });
@@ -53,6 +82,7 @@ async function loadDB() {
 
   if (!DB.activePageId && DB.pages[0]) DB.activePageId = DB.pages[0].id;
   if (DB.widgetsVisible.apps === undefined) DB.widgetsVisible.apps = true; 
+  if (!DB.settings.general.fontFamily) DB.settings.general.fontFamily = "default";
   return DB;
 }
 
@@ -74,7 +104,6 @@ function findBoard(boardId) {
    1. Wallpaper presets
    ============================================================ */
 const WALLPAPER_PRESETS = [
-  // Batch 1: Anime & Nature Aesthetic
   { name: "Dragon Temple", type: "photo", value: "wallpapers/dragon-temple.jpg" },
   { name: "Sakura Village", type: "photo", value: "wallpapers/sakura-village.jpg" },
   { name: "Sunset Tree", type: "photo", value: "wallpapers/sunset-tree.jpg" },
@@ -85,15 +114,11 @@ const WALLPAPER_PRESETS = [
   { name: "Maple Shrine", type: "photo", value: "wallpapers/maple-shrine.jpg" },
   { name: "Mossy Stairs", type: "photo", value: "wallpapers/mossy-stairs.jpg" },
   { name: "Totoro", type: "photo", value: "wallpapers/totoro.jpg" },
-  
-  // Batch 2: Art & Fantasy Aesthetic
   { name: "Starry City", type: "photo", value: "wallpapers/starry-city.jpg" },
   { name: "Great Wave", type: "photo", value: "wallpapers/great-wave.jpg" },
   { name: "Pirate Ships", type: "photo", value: "wallpapers/pirate-ships.jpg" },
   { name: "Skull Island", type: "photo", value: "wallpapers/skull-island.jpg" },
   { name: "Starry Boat", type: "photo", value: "wallpapers/starry-boat.jpg" },
-  
-  // Clean Gradients
   { name: "Aurora", type: "gradient", value: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)" },
   { name: "Midnight", type: "gradient", value: "linear-gradient(160deg, #131722, #1b2030 45%, #232945)" },
   { name: "Dusk Clay", type: "gradient", value: "linear-gradient(150deg, #22252b, #4a3b3a 55%, #7a5147)" }
@@ -140,10 +165,6 @@ function luminance(hex) {
   const { r, g, b } = hexToRgb(hex);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
-
-/* ============================================================
-   3. Escape helper
-   ============================================================ */
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str == null ? "" : str;
@@ -159,7 +180,7 @@ function hostnameOf(url) {
 }
 
 /* ============================================================
-   4. Appearance application
+   3. Appearance application
    ============================================================ */
 function applyAppearance(overrideState = null) {
   const a = overrideState || DB.settings.appearance;
@@ -202,7 +223,7 @@ function applyAppearance(overrideState = null) {
 }
 
 /* ============================================================
-   5. Wallpaper
+   4. Wallpaper
    ============================================================ */
 function applyWallpaper() {
   const bg = document.getElementById("bgLayer");
@@ -230,7 +251,6 @@ function setWallpaper(value, type) {
   openWallpaperStyleModal(value, type);
 }
 
-/* ---- wallpaper style auto-detect + modal ---- */
 let wsState = null;
 function openWallpaperStyleModal(value, type) {
   wsState = JSON.parse(JSON.stringify(DB.settings.appearance));
@@ -299,7 +319,7 @@ function closeWallpaperStyleModal() {
 }
 
 /* ============================================================
-   6. Page tabs
+   5. Page tabs
    ============================================================ */
 function renderPageTabs() {
   const wrap = document.getElementById("pageTabs");
@@ -348,7 +368,7 @@ function openPageMenu(anchorEl, pageId) {
 function closePageMenu() { document.getElementById("pageMenu").classList.remove("is-open"); document.getElementById("pageMenuScrim").classList.remove("is-open"); pageMenuTargetId = null; }
 
 /* ============================================================
-   7. Boards
+   6. Boards
    ============================================================ */
 function getEffectiveCols() {
   if (window.innerWidth <= 720) return 2;
@@ -653,7 +673,6 @@ function moveLink(fromBoardId, toBoardId, linkId, beforeLinkId) {
   advanceTourIfWaitingFor("dragDone");
 }
 
-/* ---- board "..." menu ---- */
 let boardMenuTargetId = null;
 function openBoardMenu(boardId, anchorEl) {
   boardMenuTargetId = boardId;
@@ -690,89 +709,88 @@ function openBoardCustomize(anchorEl) {
 }
 
 /* ============================================================
-   8. Add link popover
+   7. Add-link popover & Import bookmarks   (FIX: were missing)
    ============================================================ */
-let addLinkTargetBoard = null;
+let addLinkTargetBoardId = null;
 function openAddLinkPopover(boardId, anchorEl) {
-  addLinkTargetBoard = boardId;
+  addLinkTargetBoardId = boardId;
+  document.getElementById("addLinkBoardId").value = boardId;
+  const urlInput = document.getElementById("addLinkUrlInput");
+  urlInput.value = "";
   const pop = document.getElementById("addLinkPop");
-  document.getElementById("addLinkUrlInput").value = "";
   const rect = anchorEl.getBoundingClientRect();
-  let left = rect.left - 90;
-  left = Math.max(10, Math.min(left, window.innerWidth - 280));
+  let left = Math.min(rect.left, window.innerWidth - 280);
+  let top = rect.bottom + 8;
+  if (top + 130 > window.innerHeight) top = rect.top - 130;
   pop.style.left = left + "px";
-  pop.style.top = rect.bottom + 8 + "px";
+  pop.style.top = top + "px";
   pop.classList.add("is-open");
   document.getElementById("addLinkScrim").classList.add("is-open");
-  document.getElementById("addLinkUrlInput").focus();
+  urlInput.focus();
 }
 function closeAddLinkPopover() {
   document.getElementById("addLinkPop").classList.remove("is-open");
   document.getElementById("addLinkScrim").classList.remove("is-open");
-  addLinkTargetBoard = null;
+  addLinkTargetBoardId = null;
 }
-async function saveAddLink() {
+function saveAddLink() {
+  const boardId = document.getElementById("addLinkBoardId").value || addLinkTargetBoardId;
   let url = document.getElementById("addLinkUrlInput").value.trim();
-  if (!url || !addLinkTargetBoard) return;
+  if (!url) return;
   if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-  const ref = findBoard(addLinkTargetBoard);
-  if (!ref) return;
-  const link = { id: uid(), title: hostnameOf(url), url };
-  ref.board.links.push(link);
-  saveDB(); renderBoards();
+  const ref = findBoard(boardId);
+  if (!ref) { closeAddLinkPopover(); return; }
+  ref.board.links.push({ id: uid(), title: hostnameOf(url), url });
+  saveDB();
+  renderBoards();
   closeAddLinkPopover();
   advanceTourIfWaitingFor("linkAdded");
-  try {
-    const res = await fetch(url, { mode: "cors" });
-    const html = await res.text();
-    const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    if (m && m[1].trim()) {
-      link.title = m[1].trim();
-      saveDB(); renderBoards();
-    }
-  } catch { }
 }
 
-/* ============================================================
-   9. Chrome bookmarks import
-   ============================================================ */
 function importBookmarks() {
-  if (!(chrome.bookmarks && chrome.bookmarks.getTree)) return;
+  if (!chrome.bookmarks) { alert("Bookmarks permission isn't available."); return; }
   chrome.bookmarks.getTree((tree) => {
     const page = activePage();
-    const roots = (tree[0] && tree[0].children) || [];
-    roots.forEach((root) => {
-      (root.children || []).forEach((node) => {
-        if (node.children) {
-          const links = [];
-          (function walk(n) {
-            (n.children || []).forEach((child) => {
-              if (child.url) links.push({ id: uid(), title: child.title || child.url, url: child.url });
-              else if (child.children) walk(child);
-            });
-          })(node);
-          if (links.length) {
-            page.boards.push({ id: uid(), name: node.title || "Bookmarks", links, accentColor: null });
-          }
-        } else if (node.url) {
-          let misc = page.boards.find((b) => b.name === "Bookmarks");
-          if (!misc) { misc = { id: uid(), name: "Bookmarks", links: [], accentColor: null }; page.boards.push(misc); }
-          misc.links.push({ id: uid(), title: node.title || node.url, url: node.url });
-        }
-      });
-    });
-    saveDB(); renderBoards();
+    let imported = 0;
+    function walk(node) {
+      if (!node.children) return;
+      const linkChildren = node.children.filter((c) => c.url);
+      if (linkChildren.length > 0 && node.title) {
+        page.boards.push({
+          id: uid(),
+          name: node.title,
+          links: linkChildren.map((c) => ({ id: uid(), title: c.title || hostnameOf(c.url), url: c.url })),
+          accentColor: null
+        });
+        imported++;
+      }
+      node.children.forEach(walk);
+    }
+    tree.forEach(walk);
+    saveDB();
+    renderBoards();
+    if (imported === 0) alert("No bookmark folders with links were found to import.");
   });
 }
 
 /* ============================================================
-   10. Clock & weather
+   8. Clock & Weather
    ============================================================ */
 function updateClock() {
   const now = new Date();
   const fmt = DB.settings.general.timeFormat === "24" ? { hour: "2-digit", minute: "2-digit", hour12: false } : { hour: "2-digit", minute: "2-digit" };
-  document.getElementById("clockTime").textContent = now.toLocaleTimeString([], fmt);
-  document.getElementById("clockDate").textContent = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  const tStr = now.toLocaleTimeString([], fmt);
+  const dStr = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  
+  document.getElementById("clockTime").textContent = tStr;
+  document.getElementById("clockDate").textContent = dStr;
+  
+  // Update Focus mode overlay clock too
+  const focusClock = document.getElementById("focusClock");
+  if(focusClock) {
+     focusClock.textContent = tStr;
+     document.getElementById("focusDate").textContent = dStr;
+  }
 }
 setInterval(updateClock, 1000 * 15);
 
@@ -801,7 +819,16 @@ async function fetchWeather() {
 }
 
 /* ============================================================
-   11. Widgets panel
+   9. Focus Mode Toggle
+   ============================================================ */
+function toggleFocusMode() {
+  const isFocus = document.body.classList.toggle("is-focus-mode");
+  if(isFocus) { updateClock(); }
+}
+document.getElementById("exitFocusBtn").onclick = () => { document.body.classList.remove("is-focus-mode"); };
+
+/* ============================================================
+   10. Widgets panel & Floating Widgets (Versions Support)
    ============================================================ */
 function applyWidgetsVisibility() {
   const v = DB.widgetsVisible;
@@ -845,7 +872,8 @@ function addFloatingWidget(type) {
     id: uid(), type, pageId: DB.activePageId,
     x: 40 + Math.random() * 60, y: 90 + Math.random() * 60,
     style: 0,
-    data: type === "notes" ? { text: "" } : type === "pomodoro" ? { minutes: 25 } : {}
+    variant: 0, 
+    data: type === "notes" ? { text: "", tasks: [] } : type === "pomodoro" ? { minutes: 25 } : type === "feed" ? { source: "devto" } : {}
   };
   DB.floatingWidgets.push(w);
   saveDB();
@@ -863,25 +891,40 @@ function renderFloatingWidgets() {
 
 function renderFloatingWidgetEl(w) {
   if (w.style == null) w.style = 0;
+  if (w.variant == null) w.variant = 0;
+
   const el = document.createElement("div");
   el.className = "fwidget glass" + (w.style ? ` fw-style-${w.style}` : "");
   el.style.left = w.x + "px";
   el.style.top = w.y + "px";
 
-  const titleMap = { notes: "Scratchpad", calendar: "Calendar", pomodoro: "Focus timer" };
+  const titleMap = { notes: "Scratchpad", calendar: "Calendar", pomodoro: "Focus timer", feed: "News Feed", system: "System Monitor" };
   const head = document.createElement("div");
   head.className = "fwidget-head";
+  
+  // Icon for the "Switch Version" toggle
+  const variantIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`;
+
   head.innerHTML = `
     <span class="fwidget-title">${titleMap[w.type] || w.type}</span>
     <div class="fwidget-styles" title="Widget style">
-      <button class="fw-style-dot${w.style === 0 ? " is-active" : ""}" data-style="0" aria-label="Style 1"></button>
-      <button class="fw-style-dot${w.style === 1 ? " is-active" : ""}" data-style="1" aria-label="Style 2"></button>
-      <button class="fw-style-dot${w.style === 2 ? " is-active" : ""}" data-style="2" aria-label="Style 3"></button>
+      <button class="fw-style-dot${w.style === 0 ? " is-active" : ""}" data-style="0"></button>
+      <button class="fw-style-dot${w.style === 1 ? " is-active" : ""}" data-style="1"></button>
+      <button class="fw-style-dot${w.style === 2 ? " is-active" : ""}" data-style="2"></button>
     </div>
-    <button class="icon-btn" data-role="close">
+    <button class="icon-btn" data-role="toggle-variant" title="Switch Version">${variantIcon}</button>
+    <button class="icon-btn" data-role="close" title="Close">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
   `;
+
+  head.querySelector('[data-role="toggle-variant"]').onclick = (e) => {
+    e.stopPropagation();
+    w.variant = w.variant === 0 ? 1 : 0;
+    saveDB();
+    renderFloatingWidgets();
+  };
+
   head.querySelectorAll(".fw-style-dot").forEach((dot) => {
     dot.onclick = (e) => {
       e.stopPropagation();
@@ -890,26 +933,22 @@ function renderFloatingWidgetEl(w) {
       renderFloatingWidgets();
     };
   });
+  
   head.querySelector('[data-role="close"]').onclick = (e) => {
     e.stopPropagation();
     DB.floatingWidgets = DB.floatingWidgets.filter((x) => x.id !== w.id);
     saveDB(); renderFloatingWidgets();
   };
+  
   makeDraggableWidget(head, el, w);
   el.appendChild(head);
 
-  if (w.type === "notes") {
-    const ta = document.createElement("textarea");
-    ta.className = "notes-area";
-    ta.value = w.data.text || "";
-    ta.placeholder = "Jot something down…";
-    ta.oninput = () => { w.data.text = ta.value; saveDB(); };
-    el.appendChild(ta);
-  } else if (w.type === "calendar") {
-    el.appendChild(buildCalendarBody());
-  } else if (w.type === "pomodoro") {
-    el.appendChild(buildPomodoroBody(w));
-  }
+  if (w.type === "notes") el.appendChild(buildNotesBody(w));
+  else if (w.type === "calendar") el.appendChild(buildCalendarBody(w));
+  else if (w.type === "pomodoro") el.appendChild(buildPomodoroBody(w));
+  else if (w.type === "feed") el.appendChild(buildFeedBody(w));
+  else if (w.type === "system") el.appendChild(buildSystemBody(w));
+
   return el;
 }
 
@@ -934,36 +973,100 @@ function makeDraggableWidget(handle, el, w) {
   });
 }
 
-function buildCalendarBody() {
+// ---- Widget Builders with Versions Support ----
+
+function buildNotesBody(w) {
+  const wrap = document.createElement("div");
+  
+  if (w.variant === 0) {
+    // V0: Standard Text Area
+    const ta = document.createElement("textarea");
+    ta.className = "notes-area";
+    ta.value = w.data.text || "";
+    ta.placeholder = "Jot something down…";
+    ta.oninput = () => { w.data.text = ta.value; saveDB(); };
+    wrap.appendChild(ta);
+  } else {
+    // V1: Checklist / Tasks
+    w.data.tasks = w.data.tasks || [];
+    wrap.innerHTML = `
+      <div class="tasks-list"></div>
+      <input type="text" class="task-input" placeholder="+ Add a task and hit enter..." />
+    `;
+    const list = wrap.querySelector('.tasks-list');
+    const input = wrap.querySelector('.task-input');
+
+    const renderTasks = () => {
+      list.innerHTML = w.data.tasks.map((t, i) => `
+        <label class="task-item ${t.done ? 'is-done' : ''}">
+          <input type="checkbox" data-index="${i}" ${t.done ? 'checked' : ''} />
+          <span>${escapeHtml(t.text)}</span>
+        </label>
+      `).join('');
+      
+      list.querySelectorAll('input').forEach(chk => {
+        chk.onchange = (e) => {
+          w.data.tasks[e.target.dataset.index].done = e.target.checked;
+          saveDB(); renderTasks();
+        };
+      });
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        w.data.tasks.push({ text: input.value.trim(), done: false });
+        input.value = '';
+        saveDB(); renderTasks();
+      }
+    });
+
+    renderTasks();
+  }
+  return wrap;
+}
+
+function buildCalendarBody(w) {
   const wrap = document.createElement("div");
   let calDate = new Date();
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  wrap.innerHTML = `
-    <div class="cal-head">
-      <span class="cal-title"></span>
-      <div class="cal-nav"><button data-dir="-1">‹</button><button data-dir="1">›</button></div>
-    </div>
-    <div class="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
-    <div class="cal-grid"></div>
-  `;
-  function render() {
-    wrap.querySelector(".cal-title").textContent = `${MONTHS[calDate.getMonth()]} ${calDate.getFullYear()}`;
-    const grid = wrap.querySelector(".cal-grid");
-    grid.innerHTML = "";
-    const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
-    const totalDays = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate();
-    const today = new Date();
-    for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement("div"));
-    for (let d = 1; d <= totalDays; d++) {
-      const cell = document.createElement("div");
-      cell.textContent = d;
-      cell.className = "cal-day";
-      if (d === today.getDate() && calDate.getMonth() === today.getMonth() && calDate.getFullYear() === today.getFullYear()) cell.classList.add("is-today");
-      grid.appendChild(cell);
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  if (w.variant === 0) {
+    // V0: Standard Month Grid
+    wrap.innerHTML = `
+      <div class="cal-head">
+        <span class="cal-title"></span>
+        <div class="cal-nav"><button data-dir="-1">‹</button><button data-dir="1">›</button></div>
+      </div>
+      <div class="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div class="cal-grid"></div>
+    `;
+    function renderGrid() {
+      wrap.querySelector(".cal-title").textContent = `${MONTHS[calDate.getMonth()]} ${calDate.getFullYear()}`;
+      const grid = wrap.querySelector(".cal-grid");
+      grid.innerHTML = "";
+      const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
+      const totalDays = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate();
+      const today = new Date();
+      for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement("div"));
+      for (let d = 1; d <= totalDays; d++) {
+        const cell = document.createElement("div");
+        cell.textContent = d;
+        cell.className = "cal-day";
+        if (d === today.getDate() && calDate.getMonth() === today.getMonth() && calDate.getFullYear() === today.getFullYear()) cell.classList.add("is-today");
+        grid.appendChild(cell);
+      }
     }
+    wrap.querySelectorAll(".cal-nav button").forEach((b) => b.onclick = () => { calDate.setMonth(calDate.getMonth() + Number(b.dataset.dir)); renderGrid(); });
+    renderGrid();
+  } else {
+    // V1: Minimal "Today" View
+    wrap.className = "cal-today-view";
+    wrap.innerHTML = `
+      <div class="cal-today-num">${calDate.getDate()}</div>
+      <div class="cal-today-text">${DAYS[calDate.getDay()]}, ${MONTHS[calDate.getMonth()]}</div>
+    `;
   }
-  wrap.querySelectorAll(".cal-nav button").forEach((b) => b.onclick = () => { calDate.setMonth(calDate.getMonth() + Number(b.dataset.dir)); render(); });
-  render();
   return wrap;
 }
 
@@ -971,45 +1074,216 @@ function buildPomodoroBody(w) {
   const wrap = document.createElement("div");
   let minutes = w.data.minutes || 25;
   let timeLeft = minutes * 60, timerId = null;
-  wrap.innerHTML = `
-    <div class="timer-display">25:00</div>
-    <div class="timer-durations">
-      <button class="dur-chip" data-min="25">25</button>
-      <button class="dur-chip" data-min="15">15</button>
-      <button class="dur-chip" data-min="5">5</button>
-    </div>
-    <div class="timer-actions">
-      <button class="btn-primary" data-role="toggle">Start</button>
-      <button class="btn-soft" data-role="reset">Reset</button>
-    </div>
-  `;
-  const disp = wrap.querySelector(".timer-display");
-  const toggleBtn = wrap.querySelector('[data-role="toggle"]');
-  function paint() {
+
+  function paint(disp) {
     const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
     disp.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
-  wrap.querySelectorAll(".dur-chip").forEach((chip) => {
-    if (Number(chip.dataset.min) === minutes) chip.classList.add("is-active");
-    chip.onclick = () => {
-      clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start";
-      wrap.querySelectorAll(".dur-chip").forEach((c) => c.classList.remove("is-active"));
-      chip.classList.add("is-active");
-      minutes = Number(chip.dataset.min); w.data.minutes = minutes; saveDB();
-      timeLeft = minutes * 60; paint();
+
+  if (w.variant === 0) {
+    // V0: Full Timer
+    wrap.innerHTML = `
+      <div class="timer-display">25:00</div>
+      <div class="timer-durations">
+        <button class="dur-chip" data-min="25">25</button>
+        <button class="dur-chip" data-min="15">15</button>
+        <button class="dur-chip" data-min="5">5</button>
+      </div>
+      <div class="timer-actions">
+        <button class="btn-primary" data-role="toggle">Start</button>
+        <button class="btn-soft" data-role="reset">Reset</button>
+      </div>
+    `;
+    const disp = wrap.querySelector(".timer-display");
+    const toggleBtn = wrap.querySelector('[data-role="toggle"]');
+    
+    wrap.querySelectorAll(".dur-chip").forEach((chip) => {
+      if (Number(chip.dataset.min) === minutes) chip.classList.add("is-active");
+      chip.onclick = () => {
+        clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start";
+        wrap.querySelectorAll(".dur-chip").forEach((c) => c.classList.remove("is-active"));
+        chip.classList.add("is-active");
+        minutes = Number(chip.dataset.min); w.data.minutes = minutes; saveDB();
+        timeLeft = minutes * 60; paint(disp);
+      };
+    });
+    toggleBtn.onclick = () => {
+      if (timerId) { clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start"; }
+      else {
+        timerId = setInterval(() => {
+          if (timeLeft > 0) { timeLeft--; paint(disp); } else { clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start"; }
+        }, 1000);
+        toggleBtn.textContent = "Pause";
+      }
     };
+    wrap.querySelector('[data-role="reset"]').onclick = () => { clearInterval(timerId); timerId = null; timeLeft = minutes * 60; paint(disp); toggleBtn.textContent = "Start"; };
+    paint(disp);
+  } else {
+    // V1: Minimal Inline Timer
+    wrap.className = "timer-minimal";
+    wrap.innerHTML = `
+      <div class="timer-display">25:00</div>
+      <button class="timer-minimal-btn" data-role="toggle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      </button>
+    `;
+    const disp = wrap.querySelector(".timer-display");
+    const toggleBtn = wrap.querySelector('[data-role="toggle"]');
+    const playIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+    const pauseIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+
+    toggleBtn.onclick = () => {
+      if (timerId) { 
+        clearInterval(timerId); timerId = null; toggleBtn.innerHTML = playIcon; 
+      } else {
+        timerId = setInterval(() => {
+          if (timeLeft > 0) { timeLeft--; paint(disp); } else { clearInterval(timerId); timerId = null; toggleBtn.innerHTML = playIcon; }
+        }, 1000);
+        toggleBtn.innerHTML = pauseIcon;
+      }
+    };
+    paint(disp);
+  }
+
+  return wrap;
+}
+
+// Dev & News Feed Widget Builder
+function buildFeedBody(w) {
+  const wrap = document.createElement("div");
+  wrap.className = "feed-widget";
+  let currentFeed = w.data.source || 'devto';
+
+  wrap.innerHTML = `
+    <div class="feed-tabs">
+      <button class="feed-tab ${currentFeed==='devto'?'is-active':''}" data-src="devto">Dev.to</button>
+      <button class="feed-tab ${currentFeed==='hn'?'is-active':''}" data-src="hn">Hacker News</button>
+      <button class="feed-tab ${currentFeed==='reddit'?'is-active':''}" data-src="reddit">r/webdev</button>
+    </div>
+    <div class="feed-content" id="feedContent-${w.id}">
+       <div class="feed-loading">Loading feed...</div>
+    </div>
+  `;
+
+  const content = wrap.querySelector(".feed-content");
+  const tabs = wrap.querySelectorAll(".feed-tab");
+
+  async function loadFeed(src) {
+     content.innerHTML = '<div class="feed-loading">Loading...</div>';
+     try {
+        let items = [];
+        if (src === 'devto') {
+           const res = await fetch('https://dev.to/api/articles?per_page=8');
+           const data = await res.json();
+           items = data.map(item => ({ title: item.title, url: item.url }));
+        } else if (src === 'hn') {
+           const res = await fetch('https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=8');
+           const data = await res.json();
+           items = data.hits.map(item => ({ 
+             title: item.title, 
+             url: item.url || `https://news.ycombinator.com/item?id=${item.objectID}` 
+           }));
+        } else if (src === 'reddit') {
+           const res = await fetch('https://www.reddit.com/r/webdev/hot.json?limit=8');
+           const data = await res.json();
+           items = data.data.children.map(child => ({ title: child.data.title, url: 'https://reddit.com' + child.data.permalink }));
+        }
+
+        content.innerHTML = items.map(item => `
+           <a href="${escapeHtml(item.url)}" target="_blank" class="feed-item">
+              <span class="feed-item-title">${escapeHtml(item.title)}</span>
+           </a>
+        `).join('');
+     } catch (err) {
+        content.innerHTML = '<div class="feed-error">Failed to load feed. Try again later.</div>';
+     }
+  }
+
+  tabs.forEach(t => {
+     t.onclick = () => {
+        tabs.forEach(btn => btn.classList.remove('is-active'));
+        t.classList.add('is-active');
+        currentFeed = t.dataset.src;
+        w.data.source = currentFeed;
+        saveDB();
+        loadFeed(currentFeed);
+     };
   });
-  toggleBtn.onclick = () => {
-    if (timerId) { clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start"; }
-    else {
-      timerId = setInterval(() => {
-        if (timeLeft > 0) { timeLeft--; paint(); } else { clearInterval(timerId); timerId = null; toggleBtn.textContent = "Start"; }
-      }, 1000);
-      toggleBtn.textContent = "Pause";
+
+  loadFeed(currentFeed);
+  return wrap;
+}
+
+// System Hardware Monitor (Uses Chrome APIs if available, mocks if run in plain browser window)
+function buildSystemBody(w) {
+  const wrap = document.createElement("div");
+
+  if (w.variant === 0) {
+    // V0: Progress Bars
+    wrap.innerHTML = `
+      <div class="sys-stat">
+        <div class="sys-stat-head"><span>CPU Usage</span><span id="sysCpuText-${w.id}">0%</span></div>
+        <div class="sys-bar-bg"><div class="sys-bar-fill" id="sysCpuBar-${w.id}" style="width:0%"></div></div>
+      </div>
+      <div class="sys-stat">
+        <div class="sys-stat-head"><span>Memory (RAM)</span><span id="sysRamText-${w.id}">0%</span></div>
+        <div class="sys-bar-bg"><div class="sys-bar-fill" id="sysRamBar-${w.id}" style="width:0%"></div></div>
+      </div>
+    `;
+  } else {
+    // V1: Minimal Text Blocks
+    wrap.className = "sys-minimal";
+    wrap.innerHTML = `
+      <div class="sys-min-item"><div class="sys-min-val" id="sysCpuText-${w.id}">0%</div><div class="sys-min-label">CPU</div></div>
+      <div class="sys-min-item"><div class="sys-min-val" id="sysRamText-${w.id}">0%</div><div class="sys-min-label">RAM</div></div>
+    `;
+  }
+
+  let prevCpu = null;
+  const updateStats = () => {
+    const cpuText = document.getElementById(`sysCpuText-${w.id}`);
+    const cpuBar = document.getElementById(`sysCpuBar-${w.id}`);
+    const ramText = document.getElementById(`sysRamText-${w.id}`);
+    const ramBar = document.getElementById(`sysRamBar-${w.id}`);
+    
+    if(!cpuText) return; // widget was closed
+
+    // Chrome Extension API Logic
+    if (chrome && chrome.system && chrome.system.memory) {
+      chrome.system.memory.getInfo(info => {
+        const percent = Math.round(((info.capacity - info.availableCapacity) / info.capacity) * 100);
+        ramText.textContent = `${percent}%`;
+        if (ramBar) ramBar.style.width = `${percent}%`;
+      });
+    } else {
+      // Mock Fallback for standard browser viewing
+      const p = 30 + Math.random() * 40;
+      ramText.textContent = `${Math.round(p)}%`;
+      if (ramBar) ramBar.style.width = `${p}%`;
+    }
+
+    if (chrome && chrome.system && chrome.system.cpu) {
+      chrome.system.cpu.getInfo(info => {
+        let total = 0, idle = 0;
+        info.processors.forEach(p => { total += p.usage.total; idle += p.usage.idle; });
+        if (prevCpu) {
+          const idleDiff = idle - prevCpu.idle, totalDiff = total - prevCpu.total;
+          const percent = Math.floor(100 - ((idleDiff / totalDiff) * 100));
+          cpuText.textContent = `${percent}%`;
+          if (cpuBar) cpuBar.style.width = `${percent}%`;
+        }
+        prevCpu = {idle, total};
+      });
+    } else {
+       // Mock Fallback
+       const p = 10 + Math.random() * 60;
+       cpuText.textContent = `${Math.round(p)}%`;
+       if (cpuBar) cpuBar.style.width = `${p}%`;
     }
   };
-  wrap.querySelector('[data-role="reset"]').onclick = () => { clearInterval(timerId); timerId = null; timeLeft = minutes * 60; paint(); toggleBtn.textContent = "Start"; };
-  paint();
+
+  updateStats();
+  setInterval(updateStats, 2000);
   return wrap;
 }
 
@@ -1029,6 +1303,7 @@ function initToolbar() {
       if (tool === "widgets") openWidgetsPanel(btn);
       if (tool === "import") importBookmarks();
       if (tool === "manage") document.getElementById("boardGrid").classList.toggle("manage-mode");
+      if (tool === "focus") toggleFocusMode();
     };
   });
   if (DB.settings.general.sidebarAlways) extra.classList.add("is-open");
@@ -1164,6 +1439,17 @@ function populateSettingsUI() {
   document.getElementById("stTimeFormat").value = g.timeFormat;
   document.getElementById("stTempUnit").value = g.tempUnit;
 
+  const fontSelect = document.getElementById("stFontFamily");
+  if (fontSelect.options.length === 0) {
+    FONT_OPTIONS.forEach((f) => {
+      const opt = document.createElement("option");
+      opt.value = f.key; opt.textContent = f.name;
+      fontSelect.appendChild(opt);
+    });
+  }
+  fontSelect.value = g.fontFamily || "default";
+  document.getElementById("stFontPreview").style.fontFamily = fontStackFor(g.fontFamily || "default");
+
   const qsSelect = document.getElementById("stQuickSaveBoard");
   qsSelect.innerHTML = "";
   DB.pages.forEach((p) => p.boards.forEach((b) => {
@@ -1217,6 +1503,12 @@ function initSettingsWiring() {
   document.getElementById("stQuickSaveBoard").onchange = function () { g().quickSaveKey = this.value; saveDB(); };
   document.getElementById("stTimeFormat").onchange = function () { g().timeFormat = this.value; saveDB(); updateClock(); };
   document.getElementById("stTempUnit").onchange = function () { g().tempUnit = this.value; saveDB(); fetchWeather(); };
+  document.getElementById("stFontFamily").onchange = function () {
+    g().fontFamily = this.value;
+    saveDB();
+    applyFont();
+    document.getElementById("stFontPreview").style.fontFamily = fontStackFor(this.value);
+  };
   document.getElementById("stShortcutChangeBtn").onclick = () => { chrome.tabs.create({ url: "chrome://extensions/shortcuts" }); };
   document.getElementById("restartTourBtn").onclick = () => { closeSettings(); DB.tourDone = false; saveDB(); startTour(); };
   document.getElementById("downloadDataBtn").onclick = downloadData;
@@ -1385,7 +1677,6 @@ function closeAppsPopover() {
 }
 
 function initGlobalPopoverClosers() {
-  // Waffle App Drawer
   document.getElementById("appsScrim").onclick = closeAppsPopover;
   document.getElementById("waffleBtn").onclick = function() { openAppsPopover(this); };
 
@@ -1469,63 +1760,98 @@ function initGlobalPopoverClosers() {
     if (url) { setWallpaper(url, "photo"); document.getElementById("wallpaperUrlInput").value = ""; }
   };
 
-  // Real-time wallpaper style controls
-  document.getElementById("wsPrimarySwatch").onclick = function () { 
-    openColorPicker(this, wsState.board.primaryColor, (hex) => { 
-      wsState.board.primaryColor = hex; 
-      refreshWallpaperStyleUI(); 
-    }); 
-  };
-  document.getElementById("wsBoardSwatch").onclick = function () { 
-    openColorPicker(this, wsState.board.boardColor, (hex) => { 
-      wsState.board.boardColor = hex; 
-      refreshWallpaperStyleUI(); 
-    }); 
-  };
-  document.getElementById("wsOpacity").oninput = function () { 
-    wsState.board.opacity = Number(this.value); 
-    refreshWallpaperStyleUI(); 
-  };
-  document.getElementById("wsBlur").oninput = function () { 
-    wsState.board.blur = Number(this.value); 
-    refreshWallpaperStyleUI(); 
-  };
-  document.querySelectorAll("#wsTextSize button").forEach((b) => b.onclick = () => { 
-    wsState.boardText.size = b.dataset.val; 
-    refreshWallpaperStyleUI(); 
-  });
-  document.querySelectorAll("#wsTextWeight button").forEach((b) => b.onclick = () => { 
-    wsState.boardText.weight = b.dataset.val; 
-    refreshWallpaperStyleUI(); 
-  });
-  document.getElementById("wsCancelBtn").onclick = closeWallpaperStyleModal;
-  document.getElementById("wsResetBtn").onclick = () => { 
-    wsState = JSON.parse(JSON.stringify(defaultDB().settings.appearance)); 
-    refreshWallpaperStyleUI(); 
-  };
-  document.getElementById("wsSaveBtn").onclick = () => { 
-    DB.settings.appearance = wsState; 
-    saveDB(); 
-    applyAppearance(); 
-    document.getElementById("wallpaperStyleModal").classList.remove("is-open");
-    wsState = null;
-  };
-
-  document.getElementById("searchCloseBtn").onclick = (e) => { e.preventDefault(); DB.widgetsVisible.search = false; saveDB(); applyWidgetsVisibility(); };
-
-  // Google Search Autocomplete Suggestions
+  // Search Engine & Autocomplete Logic
   const searchInput = document.getElementById("searchInput");
   const suggestionsBox = document.getElementById("searchSuggestionsBox");
+  const suggestionsList = document.getElementById("searchSuggestionsList");
   const searchForm = document.getElementById("searchForm");
   
+  let currentSearchEngine = 'google';
   let suggestDebounce = null;
+  let currentFocus = -1; 
+
+  function setSearchEngine(engine) {
+    currentSearchEngine = engine;
+    document.querySelectorAll(".engine-btn").forEach(btn => btn.classList.remove("is-active"));
+    document.querySelector(`.engine-btn[data-engine="${engine}"]`).classList.add("is-active");
+    
+    const placeholders = {
+      'google': 'Search Google...',
+      'github': 'Search GitHub...',
+      'stackoverflow': 'Search StackOverflow...',
+      'mdn': 'Search MDN...'
+    };
+    searchInput.placeholder = placeholders[engine] || 'Search...';
+    searchInput.focus();
+  }
+
+  document.querySelectorAll(".engine-btn").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      setSearchEngine(btn.dataset.engine);
+    };
+  });
+
+  searchForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = searchInput.value.trim();
+    if (!q) return;
+    
+    let url = '';
+    if (currentSearchEngine === 'google') url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    else if (currentSearchEngine === 'github') url = `https://github.com/search?q=${encodeURIComponent(q)}`;
+    else if (currentSearchEngine === 'stackoverflow') url = `https://stackoverflow.com/search?q=${encodeURIComponent(q)}`;
+    else if (currentSearchEngine === 'mdn') url = `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(q)}`;
+    
+    window.location.href = url;
+  });
+
+  function setActiveSuggestion(items) {
+    if (!items || !items.length) return;
+    items.forEach(item => item.classList.remove("is-selected"));
+    if (currentFocus >= items.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = items.length - 1;
+    items[currentFocus].classList.add("is-selected");
+  }
+
+  searchInput.addEventListener("keydown", function(e) {
+    if (e.altKey && e.key >= '1' && e.key <= '4') {
+      e.preventDefault();
+      const engines = ['google', 'github', 'stackoverflow', 'mdn'];
+      setSearchEngine(engines[parseInt(e.key) - 1]);
+      return;
+    }
+
+    const items = suggestionsList.querySelectorAll(".search-suggestion-item");
+    if (!suggestionsBox.classList.contains("is-open") || items.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      currentFocus++;
+      setActiveSuggestion(items);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      currentFocus--;
+      setActiveSuggestion(items);
+    } else if (e.key === "Enter") {
+      if (currentFocus > -1) {
+        e.preventDefault();
+        searchInput.value = items[currentFocus].dataset.val;
+        searchForm.dispatchEvent(new Event("submit"));
+      }
+    }
+  });
+
   searchInput.addEventListener("input", (e) => {
     const q = e.target.value.trim();
     clearTimeout(suggestDebounce);
+    currentFocus = -1; 
+    
     if (!q) {
-      suggestionsBox.classList.remove("is-open");
+      suggestionsList.innerHTML = "";
       return;
     }
+    
     suggestDebounce = setTimeout(async () => {
       try {
         const res = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(q)}`);
@@ -1533,35 +1859,33 @@ function initGlobalPopoverClosers() {
         const suggestions = (data && data[1]) || [];
         
         if (suggestions.length) {
-          suggestionsBox.innerHTML = suggestions.map((s) => 
+          suggestionsList.innerHTML = suggestions.map((s) => 
             `<div class="search-suggestion-item" data-val="${escapeHtml(s)}">
                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                ${escapeHtml(s)}
              </div>`
           ).join("");
-          suggestionsBox.classList.add("is-open");
           
-          suggestionsBox.querySelectorAll(".search-suggestion-item").forEach(item => {
+          suggestionsList.querySelectorAll(".search-suggestion-item").forEach(item => {
             item.onclick = () => {
               searchInput.value = item.dataset.val;
-              searchForm.submit();
+              searchForm.dispatchEvent(new Event("submit"));
             };
           });
         } else {
-          suggestionsBox.classList.remove("is-open");
+          suggestionsList.innerHTML = "";
         }
       } catch { }
     }, 150);
   });
   
-  // Close suggestions when clicking outside
   document.addEventListener("click", (e) => {
     if (!searchForm.contains(e.target)) {
       suggestionsBox.classList.remove("is-open");
     }
   });
   searchInput.addEventListener("focus", () => {
-    if (searchInput.value.trim() && suggestionsBox.innerHTML) suggestionsBox.classList.add("is-open");
+    suggestionsBox.classList.add("is-open");
   });
 }
 
@@ -1571,6 +1895,7 @@ function initGlobalPopoverClosers() {
 async function init() {
   await loadDB();
   applyAppearance();
+  applyFont();
   applyWallpaper();
   applyWidgetsVisibility();
   renderPageTabs();
