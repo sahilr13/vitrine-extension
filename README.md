@@ -12,8 +12,8 @@
 
 <br/>
 
-> **📷 Replace this block with a GIF or Screenshot of Vitrine in action!**
-> *(e.g., `![Vitrine Demo](demo.gif)`)*
+<img src="demo/demo.png" alt="Vitrine Demo 1" width="48%">
+<img src="demo/demo2.png" alt="Vitrine Demo 2" width="48%">
 
 <br/>
 </div>
