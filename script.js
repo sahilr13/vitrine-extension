@@ -34,6 +34,13 @@ function defaultDB() {
         searchBar: { color: "#ffffff", opacity: 60, blur: 12, width: 480, matchBoard: false },
         boardText: { size: "M", weight: "Normal", auto: true, color: "#22262b" },
         outline: { color: "#ffffff", opacity: 75, matchBoard: false }
+      },
+      search: {
+        customEngines: [
+          { id: "engine1", name: "GitHub", url: "https://github.com/search?q=%s", iconText: "GH" },
+          { id: "engine2", name: "StackOverflow", url: "https://stackoverflow.com/search?q=%s", iconText: "SO" },
+          { id: "engine3", name: "MDN", url: "https://developer.mozilla.org/en-US/search?q=%s", iconText: "MDN" }
+        ]
       }
     },
     tourDone: false
@@ -83,6 +90,18 @@ async function loadDB() {
   if (!DB.activePageId && DB.pages[0]) DB.activePageId = DB.pages[0].id;
   if (DB.widgetsVisible.apps === undefined) DB.widgetsVisible.apps = true; 
   if (!DB.settings.general.fontFamily) DB.settings.general.fontFamily = "default";
+  
+  // Backwards compatibility for search config
+  if (!DB.settings.search) {
+    DB.settings.search = {
+      customEngines: [
+        { id: "engine1", name: "GitHub", url: "https://github.com/search?q=%s", iconText: "GH" },
+        { id: "engine2", name: "StackOverflow", url: "https://stackoverflow.com/search?q=%s", iconText: "SO" },
+        { id: "engine3", name: "MDN", url: "https://developer.mozilla.org/en-US/search?q=%s", iconText: "MDN" }
+      ]
+    };
+  }
+
   return DB;
 }
 
@@ -317,6 +336,46 @@ function closeWallpaperStyleModal() {
   wsState = null; 
   applyAppearance(); 
 }
+
+function initWallpaperStyleWiring() {
+  document.getElementById("wsPrimarySwatch").onclick = function() {
+    if(!wsState) return;
+    openColorPicker(this, wsState.board.primaryColor, (hex) => { wsState.board.primaryColor = hex; this.style.background = hex; applyAppearance(wsState); });
+  };
+  document.getElementById("wsBoardSwatch").onclick = function() {
+    if(!wsState) return;
+    openColorPicker(this, wsState.board.boardColor, (hex) => { wsState.board.boardColor = hex; this.style.background = hex; applyAppearance(wsState); });
+  };
+  document.getElementById("wsOpacity").oninput = function() {
+    if(!wsState) return;
+    wsState.board.opacity = Number(this.value); document.getElementById("wsOpacityVal").textContent = this.value + "%"; applyAppearance(wsState);
+  };
+  document.getElementById("wsBlur").oninput = function() {
+    if(!wsState) return;
+    wsState.board.blur = Number(this.value); document.getElementById("wsBlurVal").textContent = this.value + "px"; applyAppearance(wsState);
+  };
+  document.querySelectorAll("#wsTextSize button").forEach(b => b.onclick = () => {
+    if(!wsState) return;
+    wsState.boardText.size = b.dataset.val; refreshWallpaperStyleUI();
+  });
+  document.querySelectorAll("#wsTextWeight button").forEach(b => b.onclick = () => {
+    if(!wsState) return;
+    wsState.boardText.weight = b.dataset.val; refreshWallpaperStyleUI();
+  });
+
+  document.getElementById("wsCancelBtn").onclick = closeWallpaperStyleModal;
+  document.getElementById("wsResetBtn").onclick = () => {
+    wsState = JSON.parse(JSON.stringify(defaultDB().settings.appearance));
+    refreshWallpaperStyleUI();
+  };
+  document.getElementById("wsSaveBtn").onclick = () => {
+    if(!wsState) return;
+    DB.settings.appearance = JSON.parse(JSON.stringify(wsState));
+    saveDB();
+    closeWallpaperStyleModal();
+  };
+}
+
 
 /* ============================================================
    5. Page tabs
@@ -709,7 +768,7 @@ function openBoardCustomize(anchorEl) {
 }
 
 /* ============================================================
-   7. Add-link popover & Import bookmarks   (FIX: were missing)
+   7. Add-link popover & Import bookmarks
    ============================================================ */
 let addLinkTargetBoardId = null;
 function openAddLinkPopover(boardId, anchorEl) {
@@ -1214,7 +1273,7 @@ function buildFeedBody(w) {
   return wrap;
 }
 
-// System Hardware Monitor (Uses Chrome APIs if available, mocks if run in plain browser window)
+// System Hardware Monitor
 function buildSystemBody(w) {
   const wrap = document.createElement("div");
 
@@ -1413,7 +1472,7 @@ function initColorPicker() {
 }
 
 /* ============================================================
-   14. Settings modal
+   14. Settings modal & Custom Search Rendering
    ============================================================ */
 let apSnapshot = null;
 function openSettings(tab) {
@@ -1426,6 +1485,34 @@ function closeSettings() { document.getElementById("settingsModal").classList.re
 function switchSettingsTab(tab) {
   document.querySelectorAll(".settings-nav button[data-tab]").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === tab));
   document.querySelectorAll(".settings-pane").forEach((p) => p.classList.toggle("is-active", p.dataset.pane === tab));
+}
+
+function renderSearchEngineButtons() {
+  const container = document.getElementById("searchEnginesList");
+  const googleBtn = container.querySelector('[data-engine="google"]');
+  
+  container.innerHTML = "";
+  if(googleBtn) container.appendChild(googleBtn);
+
+  if (DB.settings.search && DB.settings.search.customEngines) {
+    DB.settings.search.customEngines.forEach((engine, i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "engine-btn";
+      btn.dataset.engine = engine.id;
+      btn.title = `${escapeHtml(engine.name)} (Alt+${i + 2})`;
+      btn.innerHTML = `<span style="font-weight: 800; font-size: 11px; font-family: monospace;">${escapeHtml(engine.iconText)}</span>`;
+      container.appendChild(btn);
+    });
+  }
+
+  // Bind the newly created custom engine buttons
+  document.querySelectorAll(".engine-btn").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      setSearchEngine(btn.dataset.engine);
+    };
+  });
 }
 
 function populateSettingsUI() {
@@ -1459,6 +1546,23 @@ function populateSettingsUI() {
   }));
   if (g.quickSaveKey) qsSelect.value = g.quickSaveKey;
   document.getElementById("stShortcutDisplay").textContent = g.quickSaveShortcut || "Not set";
+
+  // Search Engine Settings Rendering
+  const enginesList = document.getElementById("customSearchEnginesList");
+  enginesList.innerHTML = "";
+  if (DB.settings.search && DB.settings.search.customEngines) {
+    DB.settings.search.customEngines.forEach((engine, i) => {
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.gap = "8px";
+      row.innerHTML = `
+        <input type="text" class="text-input" placeholder="Name" value="${escapeHtml(engine.name)}" data-index="${i}" data-field="name" style="flex:1;">
+        <input type="text" class="text-input" placeholder="URL (%s for query)" value="${escapeHtml(engine.url)}" data-index="${i}" data-field="url" style="flex:2;">
+        <input type="text" class="text-input" placeholder="Short" value="${escapeHtml(engine.iconText)}" data-index="${i}" data-field="iconText" style="flex:0.8;" maxlength="4">
+      `;
+      enginesList.appendChild(row);
+    });
+  }
 
   document.getElementById("apBoardPrimary").style.background = a.board.primaryColor;
   document.getElementById("apBoardColor").style.background = a.board.boardColor;
@@ -1512,6 +1616,17 @@ function initSettingsWiring() {
   document.getElementById("stShortcutChangeBtn").onclick = () => { chrome.tabs.create({ url: "chrome://extensions/shortcuts" }); };
   document.getElementById("restartTourBtn").onclick = () => { closeSettings(); DB.tourDone = false; saveDB(); startTour(); };
   document.getElementById("downloadDataBtn").onclick = downloadData;
+
+  // Custom Search Engines Panel Wire-up
+  document.getElementById("customSearchEnginesList").addEventListener("input", (e) => {
+    if (e.target.matches("input")) {
+      const index = e.target.dataset.index;
+      const field = e.target.dataset.field;
+      DB.settings.search.customEngines[index][field] = e.target.value;
+      saveDB();
+      renderSearchEngineButtons();
+    }
+  });
 
   // board appearance
   document.getElementById("apBoardPrimary").onclick = function () { openColorPicker(this, a().board.primaryColor, (hex) => { a().board.primaryColor = hex; this.style.background = hex; saveDB(); applyAppearance(); }); };
@@ -1660,8 +1775,26 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 /* ============================================================
-   17. Global click-away & inputs
+   17. Global click-away & inputs (Search logic)
    ============================================================ */
+
+let currentSearchEngine = 'google';
+
+function setSearchEngine(engine) {
+  currentSearchEngine = engine;
+  document.querySelectorAll(".engine-btn").forEach(btn => btn.classList.remove("is-active"));
+  const activeBtn = document.querySelector(`.engine-btn[data-engine="${engine}"]`);
+  if (activeBtn) activeBtn.classList.add("is-active");
+  
+  let placeholder = 'Search Google...';
+  if (engine !== 'google') {
+    const custom = DB.settings.search.customEngines.find(x => x.id === engine);
+    if (custom && custom.name) placeholder = `Search ${custom.name}...`;
+  }
+  const searchInput = document.getElementById("searchInput");
+  searchInput.placeholder = placeholder;
+  searchInput.focus();
+}
 
 function openAppsPopover(anchorEl) {
   const pop = document.getElementById("appsPopover");
@@ -1766,45 +1899,34 @@ function initGlobalPopoverClosers() {
   const suggestionsList = document.getElementById("searchSuggestionsList");
   const searchForm = document.getElementById("searchForm");
   
-  let currentSearchEngine = 'google';
   let suggestDebounce = null;
   let currentFocus = -1; 
 
-  function setSearchEngine(engine) {
-    currentSearchEngine = engine;
-    document.querySelectorAll(".engine-btn").forEach(btn => btn.classList.remove("is-active"));
-    document.querySelector(`.engine-btn[data-engine="${engine}"]`).classList.add("is-active");
-    
-    const placeholders = {
-      'google': 'Search Google...',
-      'github': 'Search GitHub...',
-      'stackoverflow': 'Search StackOverflow...',
-      'mdn': 'Search MDN...'
-    };
-    searchInput.placeholder = placeholders[engine] || 'Search...';
-    searchInput.focus();
-  }
-
-  document.querySelectorAll(".engine-btn").forEach(btn => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      setSearchEngine(btn.dataset.engine);
-    };
-  });
-
-  searchForm.addEventListener("submit", (e) => {
+  searchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
     if (!q) return;
     
-    let url = '';
-    if (currentSearchEngine === 'google') url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
-    else if (currentSearchEngine === 'github') url = `https://github.com/search?q=${encodeURIComponent(q)}`;
-    else if (currentSearchEngine === 'stackoverflow') url = `https://stackoverflow.com/search?q=${encodeURIComponent(q)}`;
-    else if (currentSearchEngine === 'mdn') url = `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(q)}`;
+    let url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    
+    if (currentSearchEngine !== 'google') {
+      const custom = DB.settings.search.customEngines.find(x => x.id === currentSearchEngine);
+      if (custom && custom.url) {
+        url = custom.url.replace("%s", encodeURIComponent(q));
+      }
+    }
     
     window.location.href = url;
   });
+
+  function bindSuggestionClickEvents() {
+    suggestionsList.querySelectorAll(".search-suggestion-item").forEach(item => {
+      item.onclick = () => {
+        searchInput.value = item.dataset.val;
+        searchForm.dispatchEvent(new Event("submit"));
+      };
+    });
+  }
 
   function setActiveSuggestion(items) {
     if (!items || !items.length) return;
@@ -1817,8 +1939,12 @@ function initGlobalPopoverClosers() {
   searchInput.addEventListener("keydown", function(e) {
     if (e.altKey && e.key >= '1' && e.key <= '4') {
       e.preventDefault();
-      const engines = ['google', 'github', 'stackoverflow', 'mdn'];
-      setSearchEngine(engines[parseInt(e.key) - 1]);
+      const engines = ['google'];
+      if(DB.settings.search && DB.settings.search.customEngines) {
+         engines.push(...DB.settings.search.customEngines.map(x => x.id));
+      }
+      const idx = parseInt(e.key) - 1;
+      if (engines[idx]) setSearchEngine(engines[idx]);
       return;
     }
 
@@ -1842,40 +1968,41 @@ function initGlobalPopoverClosers() {
     }
   });
 
+  searchInput.addEventListener("focus", () => {
+    const q = searchInput.value.trim();
+    if (q) suggestionsBox.classList.add("is-open");
+  });
+
   searchInput.addEventListener("input", (e) => {
     const q = e.target.value.trim();
     clearTimeout(suggestDebounce);
     currentFocus = -1; 
     
     if (!q) {
+      suggestionsBox.classList.remove("is-open");
       suggestionsList.innerHTML = "";
       return;
     }
     
+    suggestionsBox.classList.add("is-open");
     suggestDebounce = setTimeout(async () => {
       try {
         const res = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(q)}`);
         const data = await res.json();
-        const suggestions = (data && data[1]) || [];
+        const webSuggestions = (data && data[1]) || [];
         
-        if (suggestions.length) {
-          suggestionsList.innerHTML = suggestions.map((s) => 
-            `<div class="search-suggestion-item" data-val="${escapeHtml(s)}">
-               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-               ${escapeHtml(s)}
-             </div>`
-          ).join("");
-          
-          suggestionsList.querySelectorAll(".search-suggestion-item").forEach(item => {
-            item.onclick = () => {
-              searchInput.value = item.dataset.val;
-              searchForm.dispatchEvent(new Event("submit"));
-            };
-          });
-        } else {
-          suggestionsList.innerHTML = "";
-        }
-      } catch { }
+        const webHtml = webSuggestions.slice(0, 5).map(s => `
+          <div class="search-suggestion-item" data-val="${escapeHtml(s)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>${escapeHtml(s)}</span>
+          </div>
+        `).join("");
+
+        suggestionsList.innerHTML = webHtml;
+        if (webHtml) bindSuggestionClickEvents();
+      } catch {
+        suggestionsList.innerHTML = "";
+      }
     }, 150);
   });
   
@@ -1883,9 +2010,6 @@ function initGlobalPopoverClosers() {
     if (!searchForm.contains(e.target)) {
       suggestionsBox.classList.remove("is-open");
     }
-  });
-  searchInput.addEventListener("focus", () => {
-    suggestionsBox.classList.add("is-open");
   });
 }
 
@@ -1901,12 +2025,14 @@ async function init() {
   renderPageTabs();
   renderBoards();
   renderFloatingWidgets();
+  renderSearchEngineButtons();
   updateClock();
   if (DB.widgetsVisible.weather) fetchWeather();
 
   initToolbar();
   initColorPicker();
   initSettingsWiring();
+  initWallpaperStyleWiring();
   initTourWiring();
   initGlobalPopoverClosers();
 

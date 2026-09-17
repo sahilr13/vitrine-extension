@@ -152,7 +152,18 @@ body.is-focus-mode .focus-overlay { opacity: 1; visibility: visible; pointer-eve
   border: 1px solid rgba(255,255,255,0.3);
   box-shadow: 0 16px 40px rgba(0,0,0,0.15);
   z-index: 99;
+  max-height: 420px;
+  overflow-y: auto;
 }
+
+.search-suggestions::-webkit-scrollbar {
+  width: 5px;
+}
+.search-suggestions::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
 .search-suggestions.is-open {
   visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0);
 }
@@ -165,7 +176,10 @@ body.is-focus-mode .focus-overlay { opacity: 1; visibility: visible; pointer-eve
 .search-suggestion-item:hover, .search-suggestion-item.is-selected { 
   background: rgba(0,0,0,0.08); 
 }
-.search-suggestion-item svg { opacity: 0.6; }
+.search-suggestion-item svg { 
+  opacity: 0.6; 
+  flex-shrink: 0;
+}
 
 /* Search Engine Switcher Buttons */
 .search-engines {
